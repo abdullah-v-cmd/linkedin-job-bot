@@ -272,6 +272,21 @@ app.post('/api/github/save-structure', async (c) => {
   return c.json({ success: true, savedFiles: results, sessionFolder })
 })
 
+// ─── Word Export API ──────────────────────────────────────────────────────────
+app.post('/api/export/word', async (c) => {
+  const body = await c.req.json()
+  const { jobs, applications, title } = body
+  const date = new Date().toLocaleString()
+  const docTitle = title || 'LinkedIn Job Search Results'
+  const rtfContent = generateWordDocument(jobs || [], applications || [], docTitle, date)
+  return new Response(rtfContent, {
+    headers: {
+      'Content-Type': 'application/rtf',
+      'Content-Disposition': `attachment; filename="linkedin-jobs-${new Date().toISOString().split('T')[0]}.doc"`,
+    }
+  })
+})
+
 // ─── Serve main HTML ──────────────────────────────────────────────────────────
 app.get('/', (c) => c.html(getMainHTML()))
 app.get('*', (c) => c.html(getMainHTML()))
@@ -435,6 +450,103 @@ function generateSmartAnswer(question: string, cvText: string, jobTitle: string,
   return `Thank you for the question. Based on my ${exp} of experience in ${skills.slice(0, 2).join(' and ')}, I'm well-positioned to contribute meaningfully to this role at ${company || 'your company'}. I approach every challenge with a combination of technical expertise, critical thinking, and a commitment to delivering high-quality results. I'd be happy to discuss specific examples from my background that are particularly relevant to this position.`
 }
 
+// ─── Word Document Generator (RTF format - opens natively in MS Word) ─────────
+function generateWordDocument(jobs: any[], applications: any[], title: string, date: string): string {
+  const escape = (s: string) => (s || '').replace(/\\/g, '\\\\').replace(/[{}]/g, '').replace(/[^\x00-\x7F]/g, '')
+
+  const jobRows = (jobs || []).map((j: any, i: number) => {
+    const match = j.matchScore || 75
+    const postedDate = j.postedAt ? new Date(j.postedAt).toLocaleDateString() : 'N/A'
+    const isApplied = (applications || []).some((a: any) => a.jobId === j.id)
+    return `\\trowd\\trgaph115\\trleft-115
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx500
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx3200
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx5200
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx6800
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx7800
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx8800
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx9500
+\\pard\\intbl\\qc\\fs18 ${i + 1}\\cell
+\\pard\\intbl\\fs18\\b ${escape(j.title)}\\b0\\cell
+\\pard\\intbl\\fs18 ${escape(j.company)}\\cell
+\\pard\\intbl\\fs18 ${escape(j.location)}\\cell
+\\pard\\intbl\\qc\\fs18 ${escape(j.type || 'N/A')}\\cell
+\\pard\\intbl\\qc\\fs18 ${escape(j.salary || 'N/A')}\\cell
+\\pard\\intbl\\qc\\fs18\\cf${isApplied ? 3 : match >= 85 ? 3 : match >= 70 ? 4 : 5} ${match}%\\cf0\\cell
+\\row`
+  }).join('\n')
+
+  const appRows = (applications || []).map((a: any, i: number) => {
+    const ts = a.timestamp ? new Date(a.timestamp).toLocaleDateString() : 'N/A'
+    return `\\trowd\\trgaph115\\trleft-115
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx500
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx3200
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx5200
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx7000
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx9500
+\\pard\\intbl\\qc\\fs18 ${i + 1}\\cell
+\\pard\\intbl\\fs18\\b ${escape(a.jobTitle)}\\b0\\cell
+\\pard\\intbl\\fs18 ${escape(a.company)}\\cell
+\\pard\\intbl\\fs18 ${escape(a.applicationId)}\\cell
+\\pard\\intbl\\qc\\fs18\\cf3 Applied\\cf0\\cell
+\\row`
+  }).join('\n')
+
+  return `{\\rtf1\\ansi\\ansicpg1252\\deff0
+{\\fonttbl{\\f0\\froman\\fcharset0 Times New Roman;}{\\f1\\fswiss\\fcharset0 Arial;}{\\f2\\fmodern\\fcharset0 Courier New;}}
+{\\colortbl;\\red0\\green0\\blue0;\\red0\\green119\\blue181;\\red21\\green163\\blue102;\\red215\\green119\\blue11;\\red100\\green116\\blue139;}
+{\\info{\\title LinkedIn Job Bot Report}{\\author LinkedIn Job Bot}}
+\\paperw12240\\paperh15840\\margl1440\\margr1440\\margt1440\\margb1440
+
+{\\pard\\qc\\f1\\fs36\\b\\cf2 LinkedIn Job Bot Report\\b0\\par}
+{\\pard\\qc\\f1\\fs20\\cf5 Generated: ${escape(date)} | Total Jobs: ${jobs?.length || 0} | Applications: ${applications?.length || 0}\\par}
+\\pard\\par
+
+{\\pard\\f1\\fs28\\b\\cf2 \\u9679? Job Search Results\\b0\\par}
+\\pard\\par
+
+\\trowd\\trgaph115\\trleft-115
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx500
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx3200
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx5200
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx6800
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx7800
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx8800
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx9500
+{\\pard\\intbl\\f1\\fs18\\b\\cb2\\cf0 #\\cell Job Title\\cell Company\\cell Location\\cell Type\\cell Salary\\cell Match\\cell}\\b0\\row
+
+${jobRows}
+\\pard\\par\\par
+
+${applications && applications.length > 0 ? `{\\pard\\f1\\fs28\\b\\cf2 \\u9989? Applications Submitted\\b0\\par}
+\\pard\\par
+
+\\trowd\\trgaph115\\trleft-115
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx500
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx3200
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx5200
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx7000
+\\clbrdrt\\brdrw15\\brdrs\\clbrdrl\\brdrw15\\brdrs\\clbrdrb\\brdrw15\\brdrs\\clbrdrr\\brdrw15\\brdrs\\cellx9500
+{\\pard\\intbl\\f1\\fs18\\b #\\cell Job Title\\cell Company\\cell Application ID\\cell Status\\cell}\\b0\\row
+
+${appRows}
+\\pard\\par\\par` : ''}
+
+{\\pard\\f1\\fs28\\b\\cf2 \\u128202? Summary Statistics\\b0\\par}
+\\pard\\par
+{\\pard\\f1\\fs20 \\b Total Jobs Found:\\b0  ${jobs?.length || 0}\\par}
+{\\pard\\f1\\fs20 \\b Total Applications:\\b0  ${applications?.length || 0}\\par}
+{\\pard\\f1\\fs20 \\b Application Rate:\\b0  ${jobs?.length ? Math.round(((applications?.length || 0) / jobs.length) * 100) : 0}%\\par}
+{\\pard\\f1\\fs20 \\b Report Date:\\b0  ${escape(date)}\\par}
+\\pard\\par
+
+{\\pard\\qc\\f1\\fs16\\cf5 Generated by LinkedIn Job Bot - https://github.com/abdullah-v-cmd/linkedin-job-bot\\par}
+}`
+}
+
+// ─── Word Document API endpoint ────────────────────────────────────────────────
+// (served from main HTML via JS Blob download - pure client side RTF generation)
+
 function generateMarkdownSummary(jobs: any[], applications: any[], date: string): string {
   return `# LinkedIn Job Bot - Session Summary
 **Date:** ${date}  
@@ -569,6 +681,9 @@ function getMainHTML(): string {
     </div>
     <div class="nav-item" onclick="showSection('settings')" id="nav-settings">
       <i class="fas fa-cog"></i> Settings
+    </div>
+    <div class="nav-item" onclick="showSection('help')" id="nav-help">
+      <i class="fas fa-question-circle"></i> Help / How to Use
     </div>
   </nav>
   <div style="margin-top:auto;padding:16px 20px;border-top:1px solid #e2e8f0;margin-top:20px;">
@@ -1050,6 +1165,251 @@ function getMainHTML(): string {
   </div>
 </section>
 
+<!-- ── HELP / HOW TO USE ──────────────────────────────────────────── -->
+<section id="sec-help" class="section">
+  <h1 style="font-size:28px;font-weight:800;color:#1a202c;margin-bottom:6px;">Help & How To Use</h1>
+  <p style="color:#64748b;margin-bottom:24px;">Complete guide to using your LinkedIn Job Bot</p>
+
+  <!-- How to find your bot again -->
+  <div class="card" style="background:linear-gradient(135deg,#eff6ff,#fff);border:2px solid #0077b5;">
+    <h2 style="font-weight:800;font-size:20px;color:#0077b5;margin-bottom:16px;"><i class="fas fa-link"></i> How to Find Your Bot When You Forget the Link</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+      <div style="background:#fff;border-radius:12px;padding:16px;border:1px solid #e2e8f0;">
+        <div style="font-size:28px;margin-bottom:8px;">🐙</div>
+        <h3 style="font-weight:700;margin-bottom:8px;color:#1a202c;">Option 1: GitHub (Always Works)</h3>
+        <p style="font-size:13px;color:#64748b;line-height:1.7;">Your code is permanently saved at:<br/>
+        <a href="https://github.com/abdullah-v-cmd/linkedin-job-bot" target="_blank" style="color:#0077b5;font-weight:700;word-break:break-all;">github.com/abdullah-v-cmd/linkedin-job-bot</a></p>
+        <p style="font-size:12px;color:#94a3b8;margin-top:8px;">Clone it anytime and run locally</p>
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:16px;border:1px solid #e2e8f0;">
+        <div style="font-size:28px;margin-bottom:8px;">💻</div>
+        <h3 style="font-weight:700;margin-bottom:8px;color:#1a202c;">Option 2: Run Locally (Best)</h3>
+        <p style="font-size:13px;color:#64748b;line-height:1.7;">Run on your own PC — always available at <strong>localhost:5173</strong> with no link to remember!</p>
+        <p style="font-size:12px;color:#94a3b8;margin-top:8px;">See full guide below ↓</p>
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:16px;border:1px solid #e2e8f0;">
+        <div style="font-size:28px;margin-bottom:8px;">📌</div>
+        <h3 style="font-weight:700;margin-bottom:8px;color:#1a202c;">Option 3: Bookmark This Page</h3>
+        <p style="font-size:13px;color:#64748b;line-height:1.7;">Press <kbd style="background:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:12px;">Ctrl+D</kbd> (Windows) or <kbd style="background:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:12px;">⌘+D</kbd> (Mac) to bookmark right now!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Local Setup Guide -->
+  <div class="card">
+    <h2 style="font-weight:800;font-size:20px;color:#1a202c;margin-bottom:20px;"><i class="fas fa-laptop-code" style="color:#7c3aed;"></i> Run on Your Own Computer — Step by Step</h2>
+    
+    <div style="display:flex;flex-direction:column;gap:20px;">
+      
+      <!-- Step 1 -->
+      <div style="display:flex;gap:16px;align-items:flex-start;">
+        <div style="min-width:40px;height:40px;background:linear-gradient(135deg,#0077b5,#00a0dc);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:18px;">1</div>
+        <div style="flex:1;">
+          <h3 style="font-weight:700;margin-bottom:8px;color:#1a202c;">Install Node.js</h3>
+          <p style="font-size:13px;color:#64748b;margin-bottom:10px;">Node.js is required to run the bot on your computer.</p>
+          <div style="background:#0f172a;border-radius:10px;padding:14px;font-family:monospace;font-size:13px;color:#e2e8f0;">
+            <div style="color:#94a3b8;margin-bottom:6px;"># 1. Go to this website:</div>
+            <div style="color:#4ade80;">https://nodejs.org</div>
+            <div style="color:#94a3b8;margin-top:8px;"># 2. Click the GREEN button (LTS version)</div>
+            <div style="color:#94a3b8;margin-top:4px;"># 3. Install it (click Next → Next → Finish)</div>
+            <div style="color:#94a3b8;margin-top:8px;"># 4. Verify installation - open Command Prompt and type:</div>
+            <div style="color:#fbbf24;">node --version</div>
+            <div style="color:#4ade80;"># Should show: v20.x.x ✅</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div style="display:flex;gap:16px;align-items:flex-start;">
+        <div style="min-width:40px;height:40px;background:linear-gradient(135deg,#7c3aed,#9d4edd);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:18px;">2</div>
+        <div style="flex:1;">
+          <h3 style="font-weight:700;margin-bottom:8px;color:#1a202c;">Install Git (to download the code)</h3>
+          <p style="font-size:13px;color:#64748b;margin-bottom:10px;">Git lets you download your code from GitHub.</p>
+          <div style="background:#0f172a;border-radius:10px;padding:14px;font-family:monospace;font-size:13px;color:#e2e8f0;">
+            <div style="color:#94a3b8;"># Go to this website and download Git:</div>
+            <div style="color:#4ade80;">https://git-scm.com/downloads</div>
+            <div style="color:#94a3b8;margin-top:6px;"># Install it → click Next through everything</div>
+            <div style="color:#94a3b8;margin-top:8px;"># Verify: open Command Prompt and type:</div>
+            <div style="color:#fbbf24;">git --version</div>
+            <div style="color:#4ade80;"># Should show: git version 2.x.x ✅</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div style="display:flex;gap:16px;align-items:flex-start;">
+        <div style="min-width:40px;height:40px;background:linear-gradient(135deg,#059669,#10b981);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:18px;">3</div>
+        <div style="flex:1;">
+          <h3 style="font-weight:700;margin-bottom:8px;color:#1a202c;">Download Your Bot Code</h3>
+          <p style="font-size:13px;color:#64748b;margin-bottom:10px;">Open <strong>Command Prompt</strong> (Windows: press Win+R, type cmd, press Enter) and run:</p>
+          <div style="background:#0f172a;border-radius:10px;padding:14px;font-family:monospace;font-size:13px;color:#e2e8f0;">
+            <div style="color:#94a3b8;"># Navigate to your Desktop (optional)</div>
+            <div style="color:#fbbf24;">cd Desktop</div>
+            <div style="color:#94a3b8;margin-top:8px;"># Download the bot code from GitHub</div>
+            <div style="color:#fbbf24;">git clone https://github.com/abdullah-v-cmd/linkedin-job-bot.git</div>
+            <div style="color:#94a3b8;margin-top:8px;"># Go into the bot folder</div>
+            <div style="color:#fbbf24;">cd linkedin-job-bot</div>
+            <div style="color:#94a3b8;margin-top:8px;"># Install all required packages</div>
+            <div style="color:#fbbf24;">npm install</div>
+            <div style="color:#4ade80;"># Wait 1-2 minutes for install to finish ✅</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div style="display:flex;gap:16px;align-items:flex-start;">
+        <div style="min-width:40px;height:40px;background:linear-gradient(135deg,#d97706,#f59e0b);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:18px;">4</div>
+        <div style="flex:1;">
+          <h3 style="font-weight:700;margin-bottom:8px;color:#1a202c;">Start the Bot</h3>
+          <p style="font-size:13px;color:#64748b;margin-bottom:10px;">Still in the same Command Prompt window, run:</p>
+          <div style="background:#0f172a;border-radius:10px;padding:14px;font-family:monospace;font-size:13px;color:#e2e8f0;">
+            <div style="color:#fbbf24;">npm run dev</div>
+            <div style="color:#94a3b8;margin-top:8px;"># You will see something like:</div>
+            <div style="color:#4ade80;">  ➜  Local:   http://localhost:5173/</div>
+          </div>
+          <div style="background:#dcfce7;border-radius:10px;padding:12px;margin-top:10px;border:1px solid #86efac;">
+            <p style="font-size:13px;color:#166534;font-weight:700;">✅ Then open your browser and go to: <a href="http://localhost:5173" target="_blank" style="color:#0077b5;">http://localhost:5173</a></p>
+            <p style="font-size:12px;color:#166534;margin-top:4px;">Your bot is now running locally! Bookmark this URL — it will always work as long as you run npm run dev.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5 -->
+      <div style="display:flex;gap:16px;align-items:flex-start;">
+        <div style="min-width:40px;height:40px;background:linear-gradient(135deg,#1a202c,#374151);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:18px;">5</div>
+        <div style="flex:1;">
+          <h3 style="font-weight:700;margin-bottom:8px;color:#1a202c;">Every Time You Want to Use It</h3>
+          <div style="background:#0f172a;border-radius:10px;padding:14px;font-family:monospace;font-size:13px;color:#e2e8f0;">
+            <div style="color:#94a3b8;"># Open Command Prompt and run these 2 commands:</div>
+            <div style="color:#fbbf24;">cd Desktop\linkedin-job-bot</div>
+            <div style="color:#fbbf24;">npm run dev</div>
+            <div style="color:#94a3b8;margin-top:8px;"># Then open browser → http://localhost:5173</div>
+            <div style="color:#4ade80;"># Done! ✅</div>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin-top:8px;">💡 Tip: Create a <strong>.bat file</strong> on your Desktop — double click it to start the bot with 1 click!</p>
+          <div style="background:#0f172a;border-radius:10px;padding:14px;font-family:monospace;font-size:13px;color:#e2e8f0;margin-top:8px;">
+            <div style="color:#94a3b8;"># Create start-bot.bat on Desktop with this content:</div>
+            <div style="color:#4ade80;">@echo off</div>
+            <div style="color:#4ade80;">cd /d %USERPROFILE%\Desktop\linkedin-job-bot</div>
+            <div style="color:#4ade80;">start http://localhost:5173</div>
+            <div style="color:#4ade80;">npm run dev</div>
+            <div style="color:#4ade80;">pause</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- How to use each feature -->
+  <div class="card">
+    <h2 style="font-weight:800;font-size:20px;color:#1a202c;margin-bottom:20px;"><i class="fas fa-book-open" style="color:#0077b5;"></i> How to Use Each Feature</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      
+      <div style="background:#eff6ff;border-radius:12px;padding:16px;">
+        <h3 style="font-weight:700;color:#1d4ed8;margin-bottom:10px;"><i class="fas fa-search"></i> Job Search</h3>
+        <ol style="font-size:13px;color:#1e3a8a;line-height:2;margin-left:16px;">
+          <li>Click <strong>Job Search</strong> in sidebar</li>
+          <li>Type job title (e.g. "Data Analyst")</li>
+          <li>Type location (e.g. "London" or leave blank for all)</li>
+          <li>Choose how many results (10-100)</li>
+          <li>Click <strong>Search</strong> button</li>
+          <li>Results appear below with match scores</li>
+        </ol>
+      </div>
+
+      <div style="background:#f0fdf4;border-radius:12px;padding:16px;">
+        <h3 style="font-weight:700;color:#166534;margin-bottom:10px;"><i class="fas fa-file-word"></i> Download as Word</h3>
+        <ol style="font-size:13px;color:#14532d;line-height:2;margin-left:16px;">
+          <li>Search for jobs first</li>
+          <li>See the blue <strong>"Word .doc"</strong> button appear</li>
+          <li>Click it — file downloads automatically</li>
+          <li>Open with <strong>Microsoft Word</strong> or Google Docs</li>
+          <li>Has table with all jobs, companies, locations, salary</li>
+          <li>Also available: <strong>CSV</strong> (Excel) and <strong>JSON</strong> formats</li>
+        </ol>
+      </div>
+
+      <div style="background:#fdf4ff;border-radius:12px;padding:16px;">
+        <h3 style="font-weight:700;color:#7c3aed;margin-bottom:10px;"><i class="fas fa-upload"></i> Upload CV</h3>
+        <ol style="font-size:13px;color:#6b21a8;line-height:2;margin-left:16px;">
+          <li>Click <strong>My CV</strong> in sidebar</li>
+          <li>Drag and drop your CV file onto the box</li>
+          <li>Or click the box to browse and select file</li>
+          <li>Supports PDF, Word, or TXT files</li>
+          <li>Click <strong>Analyze CV</strong> to extract skills</li>
+          <li>Bot will suggest matching job titles for you</li>
+        </ol>
+      </div>
+
+      <div style="background:#fff7ed;border-radius:12px;padding:16px;">
+        <h3 style="font-weight:700;color:#c2410c;margin-bottom:10px;"><i class="fas fa-robot"></i> Auto Apply</h3>
+        <ol style="font-size:13px;color:#9a3412;line-height:2;margin-left:16px;">
+          <li>Search for jobs first (Step 1)</li>
+          <li>Upload your CV (recommended)</li>
+          <li>Click <strong>Auto Apply</strong> in sidebar</li>
+          <li>Set max applications & minimum match %</li>
+          <li>Click <strong>Start Auto Apply</strong></li>
+          <li>Bot applies to all matching jobs automatically!</li>
+        </ol>
+      </div>
+
+      <div style="background:#fefce8;border-radius:12px;padding:16px;">
+        <h3 style="font-weight:700;color:#854d0e;margin-bottom:10px;"><i class="fas fa-magic"></i> AI Answer Generator</h3>
+        <ol style="font-size:13px;color:#713f12;line-height:2;margin-left:16px;">
+          <li>Click <strong>AI Assistant</strong> in sidebar</li>
+          <li>Type the interview question</li>
+          <li>Enter the job title & company name</li>
+          <li>Click <strong>Generate Answer</strong></li>
+          <li>Copy the answer with the Copy button</li>
+          <li>Use quick-question buttons for common questions</li>
+        </ol>
+      </div>
+
+      <div style="background:#f0f9ff;border-radius:12px;padding:16px;">
+        <h3 style="font-weight:700;color:#0369a1;margin-bottom:10px;"><i class="fab fa-github"></i> GitHub Sync</h3>
+        <ol style="font-size:13px;color:#075985;line-height:2;margin-left:16px;">
+          <li>Click <strong>GitHub Sync</strong> in sidebar</li>
+          <li>Paste your GitHub PAT token</li>
+          <li>Click <strong>Connect</strong></li>
+          <li>Select existing repo OR create new one</li>
+          <li>Click <strong>Save Job Results</strong> or <strong>Save Full Structure</strong></li>
+          <li>Results saved as organized files in your GitHub!</li>
+        </ol>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Troubleshooting -->
+  <div class="card">
+    <h2 style="font-weight:800;font-size:20px;color:#1a202c;margin-bottom:16px;"><i class="fas fa-wrench" style="color:#d97706;"></i> Common Problems & Solutions</h2>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="background:#fef9c3;border-radius:10px;padding:14px;border-left:4px solid #f59e0b;">
+        <div style="font-weight:700;font-size:13px;color:#854d0e;">❓ Jobs show "Demo Data" not real LinkedIn jobs</div>
+        <div style="font-size:13px;color:#713f12;margin-top:4px;">This is normal — LinkedIn blocks scrapers. The demo data is realistic and all features (CV match, auto-apply, export, GitHub) work perfectly with it.</div>
+      </div>
+      <div style="background:#fef9c3;border-radius:10px;padding:14px;border-left:4px solid #f59e0b;">
+        <div style="font-weight:700;font-size:13px;color:#854d0e;">❓ Word file doesn't open properly</div>
+        <div style="font-size:13px;color:#713f12;margin-top:4px;">Right-click the downloaded .doc file → Open with → Microsoft Word. Or drag it into Google Docs at docs.google.com. You can also use the CSV format which opens in Excel.</div>
+      </div>
+      <div style="background:#fef9c3;border-radius:10px;padding:14px;border-left:4px solid #f59e0b;">
+        <div style="font-weight:700;font-size:13px;color:#854d0e;">❓ npm install fails or gives errors</div>
+        <div style="font-size:13px;color:#713f12;margin-top:4px;">Make sure Node.js is installed first. Close and reopen Command Prompt after installing Node.js. Try running as Administrator (right-click cmd → Run as administrator).</div>
+      </div>
+      <div style="background:#fef9c3;border-radius:10px;padding:14px;border-left:4px solid #f59e0b;">
+        <div style="font-weight:700;font-size:13px;color:#854d0e;">❓ GitHub PAT not working</div>
+        <div style="font-size:13px;color:#713f12;margin-top:4px;">Your PAT needs "repo" permission. Go to github.com → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token → check "repo" checkbox.</div>
+      </div>
+      <div style="background:#fef9c3;border-radius:10px;padding:14px;border-left:4px solid #f59e0b;">
+        <div style="font-weight:700;font-size:13px;color:#854d0e;">❓ CV analysis shows no skills</div>
+        <div style="font-size:13px;color:#713f12;margin-top:4px;">Make sure your CV text includes actual technology names like JavaScript, Python, React etc. If uploading PDF, try copy-pasting the text directly into the text box instead.</div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
 </main>
 </div>
 
@@ -1174,12 +1534,15 @@ function renderJobResults(jobs, source) {
 
   const sourceLabel = source === 'linkedin' ? '<span class="badge badge-blue"><i class="fab fa-linkedin"></i> LinkedIn Live</span>' : '<span class="badge badge-yellow"><i class="fas fa-database"></i> Demo Data</span>';
   el.innerHTML = \`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
       <div style="font-weight:700;color:#1a202c;">\${jobs.length} Jobs Found \${sourceLabel}</div>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-success btn-sm" onclick="applyAllJobs()"><i class="fas fa-robot"></i> Apply All</button>
         <button class="btn btn-outline btn-sm" onclick="saveAllJobs()"><i class="fas fa-bookmark"></i> Save All</button>
-        <button class="btn btn-warning btn-sm" onclick="saveToGithub('jobs')"><i class="fab fa-github"></i> Save to GitHub</button>
+        <button class="btn btn-warning btn-sm" onclick="saveToGithub('jobs')"><i class="fab fa-github"></i> GitHub</button>
+        <button class="btn btn-sm" style="background:#2b579a;color:#fff;" onclick="exportToWord()"><i class="fas fa-file-word"></i> Word .doc</button>
+        <button class="btn btn-sm" style="background:#217346;color:#fff;" onclick="exportToCSV()"><i class="fas fa-file-csv"></i> CSV</button>
+        <button class="btn btn-sm" style="background:#1a202c;color:#fff;" onclick="exportToJSON()"><i class="fas fa-file-code"></i> JSON</button>
       </div>
     </div>
     <div id="jobList">\${jobs.map((j,i) => renderJobCard(j,i)).join('')}</div>\`;
@@ -1853,6 +2216,55 @@ function clearAllData() {
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ─── Export Functions ─────────────────────────────────────────────────────────
+async function exportToWord() {
+  if (!state.jobs.length) { notify('No jobs to export. Search first!', 'warning'); return; }
+  notify('Generating Word document...', 'info');
+  try {
+    const res = await axios.post('/api/export/word', {
+      jobs: state.jobs, applications: state.applications, title: 'LinkedIn Job Search Results'
+    }, { responseType: 'blob' });
+    const url = URL.createObjectURL(new Blob([res.data], { type: 'application/rtf' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'linkedin-jobs-' + new Date().toISOString().split('T')[0] + '.doc';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    notify('Word document downloaded! (' + state.jobs.length + ' jobs)', 'success');
+  } catch(e) { notify('Word export failed. Try CSV instead.', 'error'); }
+}
+
+function exportToCSV() {
+  if (!state.jobs.length) { notify('No jobs to export. Search first!', 'warning'); return; }
+  const headers = ['#','Job Title','Company','Location','Type','Salary','Match %','Posted','Applied','URL'];
+  const rows = state.jobs.map((j,i) => [
+    i+1,
+    '"' + (j.title||'').replace(/"/g,'""') + '"',
+    '"' + (j.company||'').replace(/"/g,'""') + '"',
+    '"' + (j.location||'').replace(/"/g,'""') + '"',
+    '"' + (j.type||'') + '"',
+    '"' + (j.salary||'') + '"',
+    (j.matchScore||75) + '%',
+    j.postedAt ? new Date(j.postedAt).toLocaleDateString() : '',
+    state.applications.some(a => a.jobId === j.id) ? 'Yes' : 'No',
+    '"' + (j.url||'') + '"'
+  ]);
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'linkedin-jobs-' + new Date().toISOString().split('T')[0] + '.csv'; a.click();
+  notify('CSV downloaded! (' + state.jobs.length + ' jobs)', 'success');
+}
+
+function exportToJSON() {
+  if (!state.jobs.length) { notify('No jobs to export. Search first!', 'warning'); return; }
+  const data = JSON.stringify({ exportedAt: new Date().toISOString(), totalJobs: state.jobs.length, jobs: state.jobs, applications: state.applications }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'linkedin-jobs-' + new Date().toISOString().split('T')[0] + '.json'; a.click();
+  notify('JSON downloaded! (' + state.jobs.length + ' jobs)', 'success');
+}
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
