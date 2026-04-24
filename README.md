@@ -1,39 +1,88 @@
-# LinkedIn Job Bot 🤖
+# 🤖 LinkedIn Job Bot — Python Edition
 
-## Project Overview
-- **Name**: LinkedIn Job Bot
-- **Goal**: Automated LinkedIn job searching, CV matching, AI answer generation, and GitHub sync
-- **Stack**: Hono + TypeScript + Cloudflare Pages + TailwindCSS
+A fully-featured, mobile-responsive LinkedIn job search bot built in **Python + Flask**.
 
-## Features
-- 🔍 **Job Search** - Search LinkedIn for latest jobs by title, location, keywords
-- 📄 **CV Upload** - Drag & drop CV upload with AI analysis & skill extraction
-- 🤖 **AI Answers** - Automatically generate smart answers to interview/application questions
-- ⚡ **Auto Apply** - Automatically apply to matched jobs with configurable settings
-- 🐙 **GitHub Sync** - Save job results, applications, and full bot structure to GitHub
-- 📊 **Dashboard** - Real-time stats and activity tracking
+## 🌐 Live URL
+**Sandbox:** https://5000-ivcdpekc3txbiokxxdj18-ad490db5.sandbox.novita.ai  
+**GitHub:** https://github.com/abdullah-v-cmd/linkedin-job-bot
 
-## Setup
-1. Open the app and go to **My CV** tab
-2. Drag & drop or paste your CV
-3. Go to **Job Search** and search for jobs
-4. Go to **GitHub Sync** tab, paste your PAT and connect
-5. Select or create a repository for saving results
-6. Use **Auto Apply** to apply to jobs automatically
+---
 
-## GitHub Sync Options
-- Save job results as `jobs/*.json`
-- Save applications as `applications/*.json`
-- Save full bot structure (sessions/ folder with summary.md)
-- Custom filename export
+## ✨ Features
+| Feature | Description |
+|---------|-------------|
+| 🔍 Job Search | Search by title, location & keywords (LinkedIn + mock fallback) |
+| 📄 CV Upload | Drag & drop PDF/TXT, AI-powered skill & experience extraction |
+| 🚀 Auto-Apply | Bulk apply with match-score threshold, real-time log |
+| 🤖 AI Answers | Smart interview answer generator for any question |
+| 📥 Word Export | Download jobs as .docx Word document |
+| 📊 CSV Export | Spreadsheet-ready CSV download |
+| 🗂️ JSON Export | Raw JSON for developers |
+| 🐙 GitHub Sync | Push results to any GitHub repo with your PAT |
+| 📱 Mobile Responsive | Works on phones, tablets & desktops |
 
-## Tech Stack
-- **Backend**: Hono framework on Cloudflare Workers
-- **Frontend**: Vanilla JS + TailwindCSS CDN
-- **Deploy**: Cloudflare Pages
-- **Storage**: GitHub API for persistence
+---
 
-## Deployment
-- **Platform**: Cloudflare Pages
-- **Status**: ✅ Active
-- **Last Updated**: 2026-04-14
+## 🚀 Run Locally (Step by Step)
+
+### Prerequisites
+- Python 3.10+ → https://python.org/downloads
+- Git → https://git-scm.com/downloads
+
+### Setup (one time)
+```bash
+git clone https://github.com/abdullah-v-cmd/linkedin-job-bot.git
+cd linkedin-job-bot
+pip install flask flask-cors requests beautifulsoup4 python-docx PyPDF2 lxml
+```
+
+### Start the bot
+```bash
+python app.py
+```
+Then open **http://localhost:5000** in your browser.
+
+### Daily use (after first setup)
+```bash
+cd linkedin-job-bot
+python app.py
+# Open http://localhost:5000
+```
+
+---
+
+## 📁 File Structure
+```
+linkedin-job-bot/
+├── app.py                     ← Main Python Flask server (ALL logic here)
+├── ecosystem_python.config.cjs ← PM2 config for sandbox
+├── README.md
+└── (src/, public/ - legacy Hono app, can ignore)
+```
+
+---
+
+## 🔑 GitHub PAT Setup
+1. Go to https://github.com/settings/tokens
+2. Click **Generate new token (classic)**
+3. Select scopes: `repo`, `read:user`
+4. Copy token → paste in the **GitHub** tab of the bot
+
+---
+
+## 🛠️ Tech Stack
+- **Backend:** Python 3.12, Flask, BeautifulSoup4
+- **Frontend:** Vanilla JS + TailwindCSS (embedded in Flask)
+- **Export:** python-docx (Word), CSV module, JSON
+- **Deployment:** PM2 + Novita Sandbox / Localhost
+
+---
+
+## ⚠️ Notes
+- LinkedIn may block scraping → bot falls back to realistic mock data
+- Auto-apply **simulates** the process (real apply needs browser automation)
+- Never share your GitHub PAT publicly
+
+---
+
+*Last updated: 2026-04-24*
